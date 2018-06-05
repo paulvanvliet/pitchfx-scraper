@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS pitches (
+        date date,
         year integer, 
         month integer, 
         day integer, 

@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
-"""
-"""
+
 import re
 from bs4 import BeautifulSoup, SoupStrainer
-from urllib2 import urlopen
+from urllib.request import urlopen
 
-"""
-First, for each day get all of the game IDs
-"""
 
 def headers():
-    headers = ['year', 
+    heading = ['date',
+               'year', 
                'month', 
                'day', 
                'away_team', 
@@ -69,7 +65,8 @@ def headers():
                'spin_dir',
                'spin_rate',
                ]
-    return headers
+    return heading
+
 
 def make_url(year, month, day):
     baseurl = 'http://gd2.mlb.com/components/game/mlb/'    
@@ -78,17 +75,15 @@ def make_url(year, month, day):
 
 
 def get_page(url):
-    '''
-        Safely attempt to get the page at the given URL
-    '''
     try:
         f = urlopen(url)
     except:
         return False
     return f
 
+
 def get_links(url):
-    '''
+    """
         Get all the links off of the page:
         gd2.mlb.com/components/game/mlb/year/month/day/
         
@@ -96,14 +91,13 @@ def get_links(url):
         format:
    
         gid_year_mm_dd_team1mlb_team2mlb   
-    '''
+    """
     f = get_page(url)
-    if f==False: return False
-    
+    if f is False:
+        return False
     # Compile the regex to match links outside of the loop for performance
     links = []
     regex = re.compile("\".*?gid_(.*?)\"", re.IGNORECASE)
-    
     # Find all links on page and if they are links to games then add to list
     for link in BeautifulSoup(f, "lxml",
                               parse_only=SoupStrainer('a', href=True)):
@@ -111,39 +105,38 @@ def get_links(url):
         
         if match:
             links.extend(match)
-   
     return links
+
 
 def get_files_web(year, month, day):
     url = make_url(year, month, day)
-      
     links = get_links(url)
-    if links == False:
+    if links is False:
         print("Could not get links on page: " + url)
         return False
-    
     games = []
     for link in links:
-        full_url = url + "/gid_" + link 
-        games_parsed = []
+        full_url = url + "/gid_" + link
         
         # Loop through the files we need to get
         page = get_page(full_url + "inning/inning_all.xml")
-        if page == False: return False
-
-        games_parsed = BeautifulSoup(page, "lxml")
+        if page is False:
+            print('Could not get page: %s' %link)
+        else:
+            games_parsed = BeautifulSoup(page, "lxml")
         
-        games.append(games_parsed)
+            games.append(games_parsed)
 
     return games
 
+
 def parse_runners(tags):
-    '''
+    """
         Parse all the <runner> tags from the <atbat> tags to get 
         the information about the current runners on base for the atbat.
         Return a list of the information so it may be appended to the running
         list
-    '''
+    """
     r1 = r2 = r3 = rbi = 0
     
     for r in tags:
@@ -156,7 +149,8 @@ def parse_runners(tags):
         
         try: 
             if r['rbi'] == 'T': rbi = rbi + 1
-        except: pass
+        except:
+            pass
 
     return [r1, r2, r3, rbi, r2+r3]
 
@@ -180,6 +174,7 @@ def get_abinfo(soupobject):
         except:
             abinfo.append('')
     return abinfo
+
 
 def get_pitchinfo(soupobject):
     pitch_fields = ['des',
@@ -223,23 +218,24 @@ def get_pitchinfo(soupobject):
         except:
             pitchinfo.append('')
     return pitchinfo
-    
+
+
 def parse_pitches(soup, year, month, day):
-    '''
+    """
         Parse the pitchfx data from the innings/innings_all.xml. This function 
         finds the atbat information, and the corresponding pitch data for the at
-        bat. It also gets other information such as the runners that are on base.
+        bat. It also gets other information such as the runners that are on base
         
         Returns all of the pitches from a particular game
-    '''
+    """
     gamedata = []
     innings = soup.find_all('inning')
     for inning in innings:
-        info = [year, month, day, inning['away_team'], inning['home_team'],
-                inning['num'],'']
+        info = [str(year)+'%02d'%month+'%02d'%day, year, month, day,
+                inning['away_team'], inning['home_team'], inning['num'], '']
         
         for half in ['top', 'bottom']:
-            info[6] = half
+            info[-1] = half
             if half == 'top':
                 try:
                     atbats = inning.top.find_all('atbat')
@@ -261,7 +257,7 @@ def parse_pitches(soup, year, month, day):
                     if p['type'] == 'B':
                         balls = balls + 1
                     elif p['type'] == 'S':
-                        if strikes < 2: strikes = strikes + 1
-                    gamedata.append(pdata)
+                        if strikes < 2:
+                            strikes = strikes + 1
+                    gamedata.append(tuple(pdata))
     return gamedata
-    

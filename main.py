@@ -1,63 +1,66 @@
-# -*- coding: utf-8 -*-
-"""
-"""
-
-from scrape import *
-from datetime import timedelta, date
+import scrape
 import datetime
-import pandas as pd
-import sqlite3
-import configs
+import db_ops
+
+try:
+    import configs
+except ImportError:
+    print('Check to make sure configs file is in same directory as main.py')
+    exit()
+else:
+    if configs.db_path == "":
+        print('Please set db_path in config file to absolute path to database')
+        exit()
+    elif configs.sql_create == "":
+        print('Please set sql_create in config file to absolute path to '
+              'pitches.sql')
+        exit()
 
 
 def get_date_from_user(which):
-    '''
+    """
         Get user input to build a datetime object. This will be used
         as the starting date of the scraping.
-    '''
+    """
     if which == 'start':
         print("Please enter start date in form: year-month-day")
     elif which == 'end':
         print("Please enter end date in form: year-month-day")
-
     uin = input()
-
     try:
-        start = datetime.datetime.strptime(uin, '%Y-%m-%d').date()
+        start_date = datetime.datetime.strptime(uin, '%Y-%m-%d').date()
     except ValueError:
         print("Incorrect format. Please try again.")
-        return get_date_from_user()
+        return get_date_from_user(which)
+    return start_date
 
-    return start
 
-def daterange(start, end):
-    '''
+def daterange(start_date, end_date):
+    """
         This function allows for iteration over a date range
         defined by start and end arguments
-    '''
-    for n in range(int ((end-start).days)):
-        yield start + timedelta(n)
-
+    """
+    for n in range(int((end_date-start_date).days)):
+        yield start + datetime.timedelta(n)
 
 if __name__ == '__main__':
-    start = get_date_from_user('start')
+    cursor, conn = db_ops.db_connect(configs.db_path)
+    cleared = db_ops.clear_prompt(cursor)
+    db_ops.table_check(cursor, configs.sql_create)
+    if cleared == 'y':
+        start = get_date_from_user('start')
+    else:
+        start = db_ops.get_last_date(cursor)
     end = get_date_from_user('end')
-    big_data = []
-
-    conn = sqlite3.connect(configs.db_path)
-    c = conn.cursor()
-    qry = open(configs.sql_create).read()
-    c.execute(qry)
     for i in daterange(start, end):
         print(i)
-        games = get_files_web(i.year, i.month, i.day)
+        games = scrape.get_files_web(i.year, i.month, i.day)
         try:
             for game in games:
-                holders = ','.join('?' * y)
-                sql = 'INSERT INTO ' + configs.table_name + VALUES({0})'.format(holders)
-                c.execute(sql, tuple(parse_pitches(game, i.year, i.month, i.day)))
+                data = scrape.parse_pitches(game, i.year, i.month, i.day)
+                db_ops.db_insert(cursor, configs.columns, data)
         except:
             pass
-
-    #df = pd.DataFrame(big_data, columns=headers())
-    #df.to_csv('C:/Projects/Baseball/Pitchfx/Data/allpitches2018.csv')
+    
+    conn.commit()
+    conn.close()
