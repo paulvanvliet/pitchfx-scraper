@@ -2,6 +2,7 @@
 import re
 from bs4 import BeautifulSoup, SoupStrainer
 from urllib.request import urlopen
+from datetime import date
 
 
 def headers():
@@ -231,7 +232,7 @@ def parse_pitches(soup, year, month, day):
     gamedata = []
     innings = soup.find_all('inning')
     for inning in innings:
-        info = [str(year)+'%02d'%month+'%02d'%day, year, month, day,
+        info = [date(year, month, day), year, month, day,
                 inning['away_team'], inning['home_team'], inning['num'], '']
         
         for half in ['top', 'bottom']:
@@ -259,5 +260,5 @@ def parse_pitches(soup, year, month, day):
                     elif p['type'] == 'S':
                         if strikes < 2:
                             strikes = strikes + 1
-                    gamedata.append(tuple(pdata))
+                    gamedata.append(pdata)
     return gamedata

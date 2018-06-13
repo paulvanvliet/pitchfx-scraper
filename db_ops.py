@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sqlite3
 import datetime
-from pathlib import Path
+#from pathlib import Path
 
 
 def check_configs(path):
@@ -9,7 +9,7 @@ def check_configs(path):
 
     :param path: path to configs file
     :return: updated file
-    """
+    
     try:
         Path(path).resolve()
     except FileNotFoundError:
@@ -17,7 +17,8 @@ def check_configs(path):
         return False
     else:
         return True
-
+    """
+    return True
 
 def db_insert(cursor, columns, data):
     """
@@ -26,10 +27,10 @@ def db_insert(cursor, columns, data):
         columns: Tuple of column names
         data: list of values to the inserted into database
     """
-    var_string = ', '.join('?' * len(data)[0])
+    var_string = ', '.join('?' * len(data))
     query_string = 'INSERT INTO pitches %s VALUES (%s);'%(columns, var_string)
     try:    
-        cursor.executemany(query_string, data)
+        cursor.execute(query_string, data)
     except sqlite3.Error as e:
         print('Data could not be inserted: %s' %e)
         return
@@ -43,14 +44,14 @@ def db_clear(cursor):
     try:
         cursor.execute('DROP TABLE IF EXISTS pitches')
     except sqlite3.Error as e:
-        print('Database could not be cleared: %s' %e)
+        print('Database could not be cleared %s' %e)
 
 
 def get_last_date(cursor):
-    cursor.execute('SELECT MAX(date) FROM pitches')
+    cursor.execute('SELECT MAX(date) FROM pitches;')
     date1 = cursor.fetchone()
-    date2 = datetime.datetime.strptime(str(date1[0]), '%Y%m%d').date()
-    date2 = datetime.timedelta(days=1)
+    date2 = datetime.datetime.strptime(str(date1[0]), '%Y-%m-%d').date()
+    date2 = date2 + datetime.timedelta(days=1)
     return date2
 
 

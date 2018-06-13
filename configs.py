@@ -2,7 +2,7 @@
 db_path = ""
 
 # Table Information
-table_name = 'pitchfx'
+table_name = 'pitches'
 sql_create = ""
 
 columns = ('date',

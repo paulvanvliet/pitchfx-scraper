@@ -1,6 +1,7 @@
 import scrape
 import datetime
 import db_ops
+from datetime import date
 
 try:
     import configs
@@ -41,7 +42,7 @@ def daterange(start_date, end_date):
         defined by start and end arguments
     """
     for n in range(int((end_date-start_date).days)):
-        yield start + datetime.timedelta(n)
+        yield start_date + datetime.timedelta(n)
 
 if __name__ == '__main__':
     cursor, conn = db_ops.db_connect(configs.db_path)
@@ -58,7 +59,8 @@ if __name__ == '__main__':
         try:
             for game in games:
                 data = scrape.parse_pitches(game, i.year, i.month, i.day)
-                db_ops.db_insert(cursor, configs.columns, data)
+                for pitch in data:
+                    db_ops.db_insert(cursor, configs.columns, pitch)
         except:
             pass
     
